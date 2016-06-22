@@ -28,10 +28,11 @@
 #include "boostqueue.h"
 #include "tbbqueue.h"
 #include "stdqueue.h"
+#include "lfqueue_stptr.h"
 #include "../tests/common/simplethread.h"
 #include "../tests/common/systemtime.h"
 #include "cpuid.h"
-
+#include "FollyQueue.h"
 using namespace moodycamel;
 
 
@@ -191,6 +192,8 @@ enum queue_id_t
 	queue_simplelockfree,
 	queue_lockbased,
 	queue_std,
+	queue_stptr,
+	queue_folly,
 	
 	QUEUE_COUNT
 };
@@ -202,6 +205,8 @@ const char QUEUE_NAMES[QUEUE_COUNT][64] = {
 	"SimpleLockFreeQueue",
 	"LockBasedQueue",
 	"std::queue",
+	"LF_QUEUE_STPTR",
+	"Folly MPMCQueue"
 };
 
 const char QUEUE_SUMMARY_NOTES[QUEUE_COUNT][128] = {
@@ -220,6 +225,8 @@ const bool QUEUE_TOKEN_SUPPORT[QUEUE_COUNT] = {
 	false,
 	false,
 	false,
+	false,
+	false,
 };
 
 const int QUEUE_MAX_THREADS[QUEUE_COUNT] = {
@@ -229,6 +236,8 @@ const int QUEUE_MAX_THREADS[QUEUE_COUNT] = {
 	-1,
 	-1,
 	1,
+	-1,
+	-1,
 };
 
 const bool QUEUE_BENCH_SUPPORT[QUEUE_COUNT][BENCHMARK_TYPE_COUNT] = {
@@ -238,6 +247,8 @@ const bool QUEUE_BENCH_SUPPORT[QUEUE_COUNT][BENCHMARK_TYPE_COUNT] = {
 	{ 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1 },
 	{ 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1 },
 	{ 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0 },
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1 }, // STPTR
+	{ 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1 }, // Folly MPMCQueue
 };
 
 
@@ -1975,6 +1986,13 @@ int main(int argc, char** argv)
 					case queue_std:
 						maxOps = determineMaxOpsForBenchmark<StdQueueWrapper<int>>((benchmark_type_t)benchmark, nthreads, (bool)useTokens, seed);
 						break;
+					case queue_stptr:
+						maxOps = determineMaxOpsForBenchmark<lf_queue<int>>((benchmark_type_t)benchmark, nthreads, (bool)useTokens, seed);
+						break;
+					case queue_folly:
+						maxOps = determineMaxOpsForBenchmark<FollyWrapper<int>>((benchmark_type_t)benchmark, nthreads, (bool)useTokens, seed);
+						break;
+
 					default:
 						assert(false && "There should be a case here for every queue in the benchmarks!");
 					}
@@ -2005,6 +2023,14 @@ int main(int argc, char** argv)
 						case queue_std:
 							elapsed = runBenchmark<StdQueueWrapper<int>>((benchmark_type_t)benchmark, nthreads, (bool)useTokens, seed, maxOps, maxThreads, ops);
 							break;
+						case queue_stptr:
+							elapsed = runBenchmark<lf_queue<int>>((benchmark_type_t)benchmark, nthreads, (bool)useTokens, seed, maxOps, maxThreads, ops);
+							break;
+						case queue_folly:
+							elapsed = runBenchmark<FollyWrapper<int>>((benchmark_type_t)benchmark, nthreads, (bool)useTokens, seed, maxOps, maxThreads, ops);
+							break;
+
+
 						default:
 							assert(false && "There should be a case here for every queue in the benchmarks!");
 						}
